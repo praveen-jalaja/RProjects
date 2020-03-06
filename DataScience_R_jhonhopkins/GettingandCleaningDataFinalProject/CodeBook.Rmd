@@ -1,0 +1,197 @@
+---
+title: "CodeBook"
+author: "Praveen Jalaja"
+date: "3/6/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+### This Code Book is an detailed Version of run_analysis.R and explains all the datasets and it functions and detailed steps to acheive the tidy data.
+
+#### Download the Dataset and Put into the Local Folder with all the files.
+
+```{r Downloading the Datasets, include=FALSE}
+library(dplyr)
+
+filename<-"coursera3_final_project.zip"
+
+if (!file.exists(filename)){
+  download.file(url = "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip",filename,method = "curl")
+  
+}
+
+## unzip the file and store in a folder named UCIDataset
+
+# Checking if folder exists
+if (!file.exists("UCI HAR Dataset")) { 
+  unzip(filename) 
+}
+```
+
+
+
+
+#### Reading the Dataset and assigning variables to store the datasets from the folder UCIDataset
+
+- The ***feature.txt*** contains all the feautures we used for the experiment.The features selected for this database come from the accelerometer and gyroscope 3-axial raw signals tAcc-XYZ and tGyro-XYZ. These time domain signals (prefix 't' to denote time) were captured at a constant rate of 50 Hz. Then they were filtered using a median filter and a 3rd order low pass Butterworth filter with a corner frequency of 20 Hz to remove noise. Similarly, the acceleration signal was then separated into body and gravity acceleration signals (tBodyAcc-XYZ and tGravityAcc-XYZ) using another low pass Butterworth filter with a corner frequency of 0.3 Hz. 
+
+```{r Features}
+features<- read.table("UCI HAR Dataset/features.txt", col.names = c("n","functions"))
+dim(features)
+```
+
+
+
+
+- The ***activity_labels.txt*** file Links the class labels with their activity name.it contains all the activities the subjects of the experiment gone through for measurement with the code for activites.
+```{r Activity Labels}
+activities <- read.table("UCI HAR Dataset/activity_labels.txt",col.names = c("code","activity"))
+dim(activities)
+```
+
+- ***train/subject_train.txt***: Each row identifies the subject who performed the activity for each window sample. Its range is from 1 to 30. 
+
+```{r Subjects for train Volunteers}
+subject_train<-read.table("UCI HAR Dataset/train/subject_train.txt",col.names = "subject")
+dim(subject_train)
+```
+
+
+- ***X_train.txt***: The Training set contains all values of different feautures for all the activites measured which contains 70% of total population taken for the Experiment.
+
+```{r Measurements of train}
+x_train<- read.table("UCI HAR Dataset/train/X_train.txt",col.names = features$functions)
+dim(x_train)
+```
+
+- ***Y_train.txt*** file have the code for all the activities mapping to the measurement. for all these activity codes the measurement in X_train file is taken.
+
+```{r The code of activities of Train measurement}
+y_train<- read.table("UCI HAR Dataset/train/Y_train.txt",col.names = "code")
+dim(y_train)
+```
+
+- **test/subject_test.txt**: Each row identifies the subject who performed the activity for each window sample.
+
+```{r Test Subjects}
+subject_test<-read.table("UCI HAR Dataset/test/subject_test.txt",col.names = "subject")
+dim(subject_test)
+```
+
+
+- **X_test.txt** : The Test measurements of the activities on different variables of Test Volunteers which constitutes of 30% of data.
+
+```{r test Measurements}
+x_test<-read.table("UCI HAR Dataset/test/X_test.txt",col.names = features$functions)
+dim(x_test)
+```
+
+
+- **Y_test.txt** : The file have the code for all the activities mapping to the measurement. for all these activity codes the measurement in Y_test file is taken.
+
+```{r Code of all activities}
+y_test<-read.table("UCI HAR Dataset/test/Y_test.txt",col.names = "code")
+dim(y_test)
+```
+
+
+
+
+
+#### Merge all the Datasets into an one Dataset for the further Cleaning of Data to make the dataset into a tidy Data.
+
+```{r binding of datasets}
+# binds the subjects dataset into one dataset with the help of rbind.
+Subject<- rbind(subject_train,subject_test)
+
+# The measurements and code of activities from both train and test data with the help of rbind.
+X<-rbind(x_train,x_test)
+Y<-rbind(y_train,y_test)
+```
+
+
+
+- Now we have the subjects ,codes of activities and measurements, so we will make a dataset called MergedData with the column order Subject,Code of activities , measurements.
+
+```{r mergedDatasets}
+Merged_Data <- cbind(Subject,Y,X)
+dim(Merged_Data)
+```
+
+
+
+
+#### Extracts only the measurements on the mean and standard deviation for each measurement.
+
+```{r Mean and Std of Data }
+TidyData <- Merged_Data %>%
+  select(subject,code,contains("mean"),contains("std"))
+```
+
+
+
+
+
+## Uses descriptive activity names like walking, laying to name the activities in the data set.
+
+```{r Activity Names}
+TidyData$code <-activities[TidyData$code,2]
+```
+
+
+
+
+#### Appropriately labels the data set with descriptive variable names.
+
+```{r Changing the names of all measurements}
+names(TidyData)[2] = "activity"
+names(TidyData)<-gsub("Acc", "Accelerometer", names(TidyData))
+names(TidyData)<-gsub("Gyro", "Gyroscope", names(TidyData))
+names(TidyData)<-gsub("BodyBody", "Body", names(TidyData))
+names(TidyData)<-gsub("Mag", "Magnitude", names(TidyData))
+names(TidyData)<-gsub("^t", "Time", names(TidyData))
+names(TidyData)<-gsub("^f", "Frequency", names(TidyData))
+names(TidyData)<-gsub("tBody", "TimeBody", names(TidyData))
+names(TidyData)<-gsub("-mean()", "Mean", names(TidyData), ignore.case = TRUE)
+names(TidyData)<-gsub("-std()", "STD", names(TidyData), ignore.case = TRUE)
+names(TidyData)<-gsub("-freq()", "Frequency", names(TidyData), ignore.case = TRUE)
+names(TidyData)<-gsub("angle", "Angle", names(TidyData))
+names(TidyData)<-gsub("gravity", "Gravity", names(TidyData))
+```
+
+
+
+#### From the data set, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+
+```{r Final Data}
+FinalData <- TidyData %>%
+  group_by(subject,activity)%>%
+  summarise_all(mean)
+write.table(FinalData,"FinalData.txt",row.name= FALSE)
+```
+
+
+#### Check the Final Tidy Dataset after all the operations.
+
+```{r Printing the labels}
+str(FinalData)
+```
+
+
+
+
+
+
+```{r VIewing Datasets}
+FinalData
+```
+
+
+
+
+
