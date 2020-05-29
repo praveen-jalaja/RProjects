@@ -1,0 +1,45 @@
+---
+output: 
+  html_document:
+    css: www/styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+library(tidyverse)
+library(leaflet)
+```
+
+<link href="http://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+# The 50 State Capitals of the United States
+
+### `r format(Sys.Date(), format = "%B %d, %Y")`
+
+```{r load-date}
+state_capitals <- read_csv("data/state-capitals.csv") %>%
+  mutate(label = paste0(city, ", ", state))
+```
+
+
+```{r}
+epsg2163 <- leafletCRS(
+  crsClass = "L.Proj.CRS",
+  code = "EPSG:2163",
+  proj4def = "+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs",
+  resolutions = 2^(16:7))
+
+leaflet(data = state_capitals) %>%
+  addTiles() %>%
+  addCircleMarkers(lng = ~longitude, 
+                   lat = ~latitude,
+                   label = ~label,
+                   radius = 6,
+                   stroke = FALSE, 
+                   fillOpacity = 0.5,
+                   color = "#1696d2",
+                   labelOptions = labelOptions(style = list("font-family" = "Lato"))) %>%
+  addProviderTiles(providers$CartoDB.Positron)
+```
